@@ -1,4 +1,14 @@
-# TradingQnA Public Profile Collector
+# Public Data Lead Generation Pipeline
+
+## Project Overview
+
+This repository demonstrates a multi-source public-data lead generation pipeline using:
+
+- **NSE** — public market-member/broker records
+- **SEBI** — public registered intermediary records
+- **TradingQnA** — public trading-community user discovery
+
+The pipeline demonstrates how public information can be collected, normalized, deduplicated, enriched where explicitly available, and exported into structured datasets for research and prospect discovery.
 
 A small, HTML-only research tool that discovers public community members on
 [TradingQnA](https://tradingqna.com) (Zerodha's trading community forum) and
