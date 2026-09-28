@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+data/*.json
+data/*.db
+data/*.db-*
+output/*.csv
+output/*.xlsx
+logs/
+*.log
+.pytest_cache/
+.vscode/
