@@ -1,159 +1,401 @@
 # Public Data Lead Generation Pipeline
 
+A multi-source public-data lead generation pipeline demonstrating how publicly available information can be discovered, normalized, deduplicated, enriched where explicitly available, and exported into structured datasets.
+
 ## Project Overview
 
-This repository demonstrates a multi-source public-data lead generation pipeline using:
+This repository demonstrates three complementary public-data collection workflows:
 
-- **NSE** — public market-member/broker records
-- **SEBI** — public registered intermediary records
-- **TradingQnA** — public trading-community user discovery
+* **NSE** — public market-member and broker records
+* **SEBI** — public registered intermediary records
+* **TradingQnA** — public trading-community user discovery
 
-The pipeline demonstrates how public information can be collected, normalized, deduplicated, enriched where explicitly available, and exported into structured datasets for research and prospect discovery.
+The project uses traders and financial-market communities as a practical demonstration of how manual prospect research can be converted into a repeatable data pipeline.
 
-A small, HTML-only research tool that discovers public community members on
-[TradingQnA](https://tradingqna.com) (Zerodha's trading community forum) and
-collects whatever contact/social information they have chosen to publish on
-their own public profile page.
+### What the project demonstrates
 
-It is intentionally conservative: it only reads public HTML pages a browser
-(or a search engine) could read anyway, it checks `robots.txt` before making
-any request, and it never logs in, bypasses access controls, or guesses at
-information a person hasn't published themselves.
+```text
+Public Sources
+      ↓
+Source-specific Scrapers
+      ↓
+Record Discovery
+      ↓
+Normalization
+      ↓
+Deduplication
+      ↓
+Public Profile Enrichment
+      ↓
+Categorization / Keywords
+      ↓
+Structured Lead Data
+      ↓
+CSV / Excel
+```
+
+The repository contains the collection and processing code, not the scraped personal-data dataset.
+
+---
+
+# Data Sources
+
+## NSE
+
+The NSE scraper collects publicly available market-member/broker information exposed through NSE's public member resources.
+
+The resulting records can be used for market research, organization discovery, and structured lead-generation workflows.
+
+## SEBI
+
+The SEBI scraper collects publicly available information from SEBI's recognized intermediary records.
+
+The resulting dataset is intended for structured research and organization/intermediary discovery.
+
+## TradingQnA
+
+The TradingQnA scraper discovers individual public community members from trading-related discussions and then checks their public profile pages for information they have explicitly chosen to publish.
+
+It is intentionally conservative:
+
+* it reads public HTML pages only
+* it checks `robots.txt` before making requests
+* it does not log in
+* it does not access private profiles
+* it does not bypass CAPTCHA or bot protection
+* it does not guess or infer contact information
+* it does not search external sites for hidden contact information
+
+---
+
+# TradingQnA Public Profile Collector
 
 ## What it collects
 
-For each publicly discovered person, one row with:
+For each publicly discovered person, the TradingQnA collector can produce fields including:
 
-- `name`, `username`, `profile_url`
-- `email`, `phone` -- only when explicitly published on their profile
-- `whatsapp`, `telegram`, `linkedin`, `twitter`, `instagram`, `youtube` -- only
-  when the profile itself links to that account
-- `website` -- only when a link in the person's own bio is clearly labeled as
-  their site ("Website:", "my blog", "portfolio", etc.); an unlabeled link
-  (e.g. a cited article) is never treated as someone's personal website
-- `bio` -- their public bio text, verbatim
-- `trading_categories`, `trading_keywords` -- which target categories/topics
-  they were seen posting in, and which trading-related keywords appeared in
-  those topic titles/categories
-- `topics_seen`, `posts_seen` -- how many of the crawled topics/posts this
-  person appears in (see "Known data-source limitations" below)
+* `name`, `username`, `profile_url`
+* `email`, `phone` — only when explicitly published on the public profile
+* `whatsapp`, `telegram`, `linkedin`, `twitter`, `instagram`, `youtube` — only when the profile itself links to that account
+* `website` — only when a link in the person's own bio is clearly presented as their website
+* `bio` — public profile bio text
+* `trading_categories`, `trading_keywords` — categories and trading-related keywords associated with the discovered topics
+* `topics_seen`, `posts_seen` — counts derived from the public HTML structures that can be attributed to the person
 
-`city`, `state`, and `country` columns are also present for schema stability,
-but are always empty: TradingQnA's public (non-JavaScript) profile page does
-not expose a location field at all, so there is nothing to collect there.
+The schema also contains:
 
-## How it works
-
-```
-/categories (public HTML)
-      -> target categories (Trading, F&O, Stocks, ...)
-      -> /c/<category>/<id> topic-list HTML, paginated
-      -> topic URLs
-      -> /t/<slug>/<id> topic HTML
-      -> public post authors (usernames)
-      -> /u/<username> public profile HTML
-      -> CSV / XLSX
+```text
+city
+state
+country
 ```
 
-Every step reads plain server-rendered HTML with `requests` + `lxml`. There is
-no use of TradingQnA's JSON/API endpoints, no JavaScript execution, and no
-attempt to render or query anything other than the public page a logged-out
-visitor already sees.
+These fields remain empty when the public non-JavaScript profile page does not expose location information.
 
-Before the first request, the tool fetches `/robots.txt` and refuses to run
-at all if any of the public paths it needs (`/categories`, `/latest`, `/c/`,
-`/t/`, `/u/`) are disallowed for `*`. Every subsequent request is checked
-against the same rules, must stay on `tradingqna.com`, and is retried a
-limited number of times with backoff; a persistent HTTP 429 or 401/403 stops
-the run rather than working around it.
+---
 
-## Installation
+# How the TradingQnA Scraper Works
+
+```text
+/categories
+      ↓
+Target public categories
+      ↓
+/c/<category>/<id>
+      ↓
+Paginated topic lists
+      ↓
+/t/<slug>/<id>
+      ↓
+Public post authors
+      ↓
+/u/<username>
+      ↓
+Public profile HTML
+      ↓
+Structured person records
+      ↓
+CSV / XLSX
+```
+
+The scraper uses:
+
+* `requests`
+* `lxml`
+* plain server-rendered HTML
+
+It does not use TradingQnA's JSON/API endpoints and does not execute JavaScript.
+
+Before crawling, the scraper fetches `/robots.txt` and checks whether the public paths it requires are permitted. Each subsequent request is checked again, must remain on `tradingqna.com`, and uses limited retries with backoff.
+
+A persistent `429`, `401`, or `403` stops the run rather than attempting to work around the restriction.
+
+---
+
+# Installation
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+```
 
+### Windows
+
+```powershell
+.venv\Scripts\activate
+```
+
+### macOS / Linux
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
 Requires Python 3.11+.
 
-## Running it
+---
+
+# Running the TradingQnA Collector
+
+### Small test
 
 ```bash
-# Small test run -- fast, safe to run anytime
 python -m scrapers.tradingqna --max-pages 2 --max-topics 50 --max-profiles 50
-
-# Larger collection run
-python -m scrapers.tradingqna --fresh --max-pages 30 --max-topics 7500 --max-profiles 12000
-
-# Resume a previous run using the local cache
-python -m scrapers.tradingqna --max-pages 30 --max-topics 7500 --max-profiles 12000
 ```
 
-See `python -m scrapers.tradingqna --help` for the full option list.
+### Larger collection
 
-### Resume / checkpoint behavior
+```bash
+python -m scrapers.tradingqna --fresh --max-pages 30 --max-topics 12000 --max-profiles 12000
+```
 
-Every category page, topic page, and profile page fetched is written to
-`data/tradingqna_people_cache.json` as it's collected. Re-running the same
-command (without `--fresh`) picks up where it left off instead of
-re-requesting pages it already has. The CSV/XLSX outputs are also re-written
-periodically during a run (every 100 topics/profiles) and on exit, including
-after an interruption (Ctrl+C) or an unexpected error, so a long run never
-loses progress.
+### Resume an existing run
 
-**Caveat:** each run's exported CSV/XLSX reflects only the topics/profiles
-selected for *that* run (via `--max-topics` / `--max-profiles`), not
-everything ever discovered across all previous runs. Running a small test
-(e.g. `--max-topics 10`) against a cache that already holds thousands of
-topics will overwrite the output files with that smaller subset. If you want
-the full dataset re-exported, use limits at least as large as your cache
-already contains (or set them to `0` for no cap).
+```bash
+python -m scrapers.tradingqna --max-pages 30 --max-topics 12000 --max-profiles 12000
+```
 
-## Output files
+For the full command-line options:
 
-- `output/tradingqna_people.csv` -- one row per discovered person
-- `output/tradingqna_people.xlsx` -- same data, plus a `discovery` sheet
-  (one row per individually-attributed public post -- see below)
-- `data/tradingqna_people_cache.json` -- the full local cache/checkpoint;
-  safe to delete to force a clean re-crawl, or keep to resume
+```bash
+python -m scrapers.tradingqna --help
+```
 
-None of these are committed to this repository (see `.gitignore`) since they
-contain scraped, potentially personal data.
+---
 
-## Known data-source limitations
+# Checkpoint and Resume
 
-- **Not every profile publishes contact or social information.** Most public
-  TradingQnA profiles have no email, phone, website, or social links at all --
-  `email`/`phone`/`website`/social columns being empty is the expected,
-  common case, not a collection failure.
-- **A discovered username is not a guarantee of an active trader.** This tool
-  discovers anyone whose public username appears as a post author (or is
-  `@mentioned`) in the target categories; it does not verify trading activity,
-  account status, or intent.
-- **`posts_seen` / the `discovery` sheet reflect individually-attributed
-  posts only.** On topic pages where TradingQnA's public HTML exposes a
-  distinct post block per author (the common case), each post is counted
-  individually. On the rare page where that structure isn't present, the
-  tool falls back to scanning for public `/u/<username>` links so the person
-  is still discovered -- but that fallback does not produce a verified post
-  count, so it does not increment `posts_seen` or add a `discovery` row.
-  `topics_seen` (how many distinct topics a person appears in) is unaffected
-  and always accurate.
-- **Location is never populated.** TradingQnA's public, non-JavaScript
-  profile view has no location field to read.
+The scraper maintains a local cache:
 
-## What this tool does not do
+```text
+data/tradingqna_people_cache.json
+```
 
-- No login, session cookies, or private-profile access
-- No CAPTCHA or bot-protection bypass
-- No stealth headers or browser impersonation -- requests identify themselves
-  plainly via `User-Agent: TradingQnA-Public-Research/1.0`
-- No use of TradingQnA's JSON/API endpoints
-- No inferring, guessing, or looking up contact details anywhere off-profile
+Progress is periodically saved while processing categories, topics, and profiles.
 
-## License
+CSV/XLSX outputs are checkpointed periodically during the run so a long collection has usable intermediate output.
 
-MIT -- see [LICENSE](LICENSE).
+If the process is interrupted with `Ctrl+C` or encounters an unexpected error, the cache is saved so the run can be resumed.
+
+Use the same command again **without `--fresh`** to continue from the existing cache.
+
+### Important output behavior
+
+The exported CSV/XLSX reflects the topics and profiles selected for the current run.
+
+For example, running a small test against an existing large cache can produce a smaller output dataset.
+
+To export the complete discovered set, use limits large enough to include the full cache or use `0` where supported for no limit.
+
+---
+
+# Output Files
+
+TradingQnA outputs:
+
+```text
+output/tradingqna_people.csv
+output/tradingqna_people.xlsx
+data/tradingqna_people_cache.json
+```
+
+The Excel workbook contains:
+
+* `people` — one row per discovered person
+* `discovery` — individually attributed public posts when the public HTML structure provides verified post attribution
+
+Generated datasets and caches are excluded from the public repository because they may contain scraped personal information.
+
+---
+
+# Example Lead Generation Workflow
+
+The project demonstrates how a company could turn public research into a repeatable prospect-discovery workflow.
+
+For example, a company offering trading software could focus on public discussions related to:
+
+```text
+Algos
+Options
+Futures
+Intraday trading
+Technical analysis
+Stocks
+Nifty / Bank Nifty
+```
+
+The workflow becomes:
+
+```text
+Trading discussion
+      ↓
+Public author
+      ↓
+Public profile
+      ↓
+Trading categories / keywords
+      ↓
+Publicly published contact or social information
+      ↓
+Structured prospect record
+```
+
+The resulting dataset can then be reviewed and qualified before being used in a business workflow.
+
+---
+
+# Known Data-Source Limitations
+
+### Public contact information is often unavailable
+
+Many public profiles do not publish email addresses, phone numbers, websites, or social handles.
+
+An empty contact field therefore does not necessarily indicate a collection failure.
+
+### A username is not proof of current trading activity
+
+A discovered username only indicates that the public account appeared in the crawled discussions or public references.
+
+The scraper does not independently verify:
+
+* current trading activity
+* account status
+* intent to buy
+* professional status
+* customer status
+
+### Post attribution depends on public HTML structure
+
+When the public HTML exposes individually attributed post blocks, the scraper can record post-level information.
+
+When that structure is unavailable, the scraper may fall back to discovering public `/u/<username>` links. Those fallback discoveries do not create verified post records or increment `posts_seen`.
+
+### Location availability
+
+The current public non-JavaScript profile view does not expose a usable location field, so:
+
+```text
+city
+state
+country
+```
+
+may remain empty.
+
+---
+
+# What This Project Does Not Do
+
+* No login or authenticated access
+* No private-profile access
+* No CAPTCHA bypass
+* No bot-protection bypass
+* No robots.txt bypass
+* No stealth or browser impersonation
+* No API/JSON endpoint scraping for TradingQnA
+* No guessed email addresses or phone numbers
+* No hidden-contact discovery on external websites
+
+---
+
+# Project Structure
+
+```text
+lead-generator-pipeline/
+│
+├── scrapers/
+│   ├── nse.py
+│   ├── sebi.py
+│   └── tradingqna.py
+│
+├── config/
+├── processors/
+├── tests/
+│
+├── README.md
+├── requirements.txt
+├── .gitignore
+└── LICENSE
+```
+
+Generated files such as:
+
+```text
+.venv/
+data/
+output/
+logs/
+__pycache__/
+.env
+```
+
+are excluded from version control.
+
+---
+
+# Demonstration Results
+
+A previous TradingQnA demonstration run produced:
+
+```text
+Topics collected:       12,000
+Unique people:           7,575
+Profiles fetched:        7,500+
+```
+
+These numbers represent a specific collection run and should not be interpreted as a permanent count of users or topics on the website.
+
+---
+
+# Why This Project
+
+The goal is to demonstrate the engineering pattern behind automated public-data lead generation:
+
+```text
+Discover
+   ↓
+Extract
+   ↓
+Normalize
+   ↓
+Deduplicate
+   ↓
+Enrich
+   ↓
+Classify
+   ↓
+Export
+```
+
+The trader/community use case provides a practical example, while the same pattern can be adapted to other legitimate public-data research and prospect-discovery workflows.
+
+---
+
+# License
+
+MIT — see [LICENSE](LICENSE).
